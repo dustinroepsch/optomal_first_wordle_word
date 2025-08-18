@@ -10,24 +10,42 @@ lazy_static! {
         .filter(|word| word.len() == 5)
         .map(|s| s.to_string())
         .collect();
+    static ref letter_map: Vec<[bool; 26]> = wordle_words
+        .iter()
+        .map(|word| make_letter_map(word))
+        .collect();
 }
+
+fn make_letter_map(word: &str) -> [bool; 26] {
+    let mut result: [bool; 26] = [false; 26];
+
+    for c in word.chars() {
+        result[to_idx(c)] = true;
+    }
+
+    result
+}
+
+fn to_idx(c: char) -> usize {
+    c as usize - ('a' as usize)
+}
+
 fn main() {
     println!("Total word count: {}", wordle_words.len());
 
-    let best_word = wordle_words
-        .clone()
+    let best_word = (0..wordle_words.len())
         .into_par_iter()
         .progress()
-        .min_by_key(|word| score(word))
+        .min_by_key(|&word_idx| score(word_idx))
         .unwrap();
 
     println!("best word is ({})", best_word);
 }
 
-fn score(starting_word: &str) -> u64 {
+fn score(word_idx: usize) -> u64 {
     let mut score: u64 = 0;
     for correct_answer in wordle_words.iter() {
-        if let CheckResult::Incorrect(hints) = check(starting_word, correct_answer) {
+        if let CheckResult::Incorrect(hints) = check(word_idx, correct_answer) {
             for second_guess in wordle_words.iter() {
                 if hints.iter().all(|&hint| second_guess.is_valid_for(hint)) {
                     score += 1;
@@ -43,8 +61,9 @@ enum CheckResult {
     Incorrect(HashSet<Hint>),
 }
 
-fn check(guess: &str, answer: &str) -> CheckResult {
+fn check(word_idx: usize, answer: &str) -> CheckResult {
     let mut hints: HashSet<Hint> = HashSet::new();
+    let guess = &wordle_words[word_idx];
     if guess == answer {
         return CheckResult::Correct;
     }
@@ -52,14 +71,14 @@ fn check(guess: &str, answer: &str) -> CheckResult {
         if gc == ac {
             hints.insert(Hint::ContainsAt(gc, idx));
             hints.insert(Hint::Contains(gc));
-        } else if answer.chars().any(|c| c == gc) {
+        } else if letter_map[word_idx][to_idx(gc)] {
             hints.insert(Hint::Contains(gc));
             hints.insert(Hint::DoesNotContainAt(gc, idx));
         } else {
             hints.insert(Hint::DoesNotContain(gc));
         }
-
     }
+    // println!("Guess ({}) Answer({}) hints ({:?})", guess, answer, hints);
     CheckResult::Incorrect(hints)
 }
 
