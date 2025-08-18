@@ -5,21 +5,22 @@ use std::collections::HashSet;
 use std::iter::zip;
 
 lazy_static! {
-    static ref wordle_words: Vec<String> = include_str!("original_wordle_words.txt")
+    static ref wordle_words: Vec<Vec<char>> = include_str!("original_wordle_words.txt")
         .split_ascii_whitespace()
         .filter(|word| word.len() == 5)
-        .map(|s| s.to_string())
+        .map(|s| s.chars().collect())
         .collect();
+
     static ref letter_map: Vec<[bool; 26]> = wordle_words
         .iter()
         .map(|word| make_letter_map(word))
         .collect();
 }
 
-fn make_letter_map(word: &str) -> [bool; 26] {
+fn make_letter_map(word: &Vec<char>) -> [bool; 26] {
     let mut result: [bool; 26] = [false; 26];
 
-    for c in word.chars() {
+    for &c in word{
         result[to_idx(c)] = true;
     }
 
@@ -61,13 +62,13 @@ enum CheckResult {
     Incorrect(HashSet<Hint>),
 }
 
-fn check(word_idx: usize, answer: &str) -> CheckResult {
+fn check(word_idx: usize, answer: &Vec<char>) -> CheckResult {
     let mut hints: HashSet<Hint> = HashSet::new();
     let guess = &wordle_words[word_idx];
     if guess == answer {
         return CheckResult::Correct;
     }
-    for (idx, (gc, ac)) in zip(guess.chars(), answer.chars()).enumerate() {
+    for (idx, (&gc, &ac)) in zip(guess, answer).enumerate() {
         if gc == ac {
             hints.insert(Hint::ContainsAt(gc, idx));
             hints.insert(Hint::Contains(gc));
@@ -94,13 +95,13 @@ trait Match {
     fn is_valid_for(&self, hint: Hint) -> bool;
 }
 
-impl Match for String {
+impl Match for Vec<char> {
     fn is_valid_for(&self, hint: Hint) -> bool {
         match hint {
-            Hint::DoesNotContain(c) => !self.chars().any(|oc| c == oc),
-            Hint::DoesNotContainAt(c, idx) => self.chars().nth(idx) != Some(c),
-            Hint::Contains(c) => self.chars().any(|oc| c == oc),
-            Hint::ContainsAt(c, idx) => self.chars().nth(idx) == Some(c),
+            Hint::DoesNotContain(c) => !self.iter().any(|&oc| c == oc),
+            Hint::DoesNotContainAt(c, idx) => self[idx] != c,
+            Hint::Contains(c) => self.iter().any(|&oc| c == oc),
+            Hint::ContainsAt(c, idx) => self[idx] == c,
         }
     }
 }
