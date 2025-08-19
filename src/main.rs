@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::iter::zip;
 
 lazy_static! {
-    static ref wordle_words: Vec<Vec<char>> = include_str!("original_wordle_words.txt")
+    static ref wordle_words: Vec<Vec<char>> = include_str!("all_words.txt")
         .split_ascii_whitespace()
         .filter(|word| word.len() == 5)
         .map(|s| s.chars().collect())
@@ -40,7 +40,7 @@ fn main() {
         .min_by_key(|&word_idx| score(word_idx))
         .unwrap();
 
-    println!("best word is ({})", best_word);
+    println!("best word is ({})", wordle_words[best_word].iter().collect::<String>());
 }
 
 fn score(word_idx: usize) -> u64 {

@@ -3,6 +3,11 @@ name = "wordle"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+lto = true
+codegen-units = 1
+
+
 [dependencies]
 indicatif = { version = "0.18.0", features = ["rayon"] }
 lazy_static = "1.5.0"
